@@ -1,0 +1,8 @@
+(include_subdirs qualified)
+
+(coq.theory
+ (name Parsers)
+ (package coq-monadic-grammars)
+ (modules
+  (:standard))
+)
