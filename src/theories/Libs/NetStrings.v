@@ -53,6 +53,8 @@ Ltac red_parses_all :=
   end; simpl_env; subst).
 
 Section Single.
+
+
   Definition dig : parser nat := 
     (char "0" @ fun _ => 0) ||
     (char "1" @ fun _ => 1) || 
