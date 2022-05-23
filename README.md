@@ -11,6 +11,8 @@ The definition is found in [src/theories/Regular.v](src/theories/Regular.v), whi
 
 The definition also includes a high-level semantics, relating strings and parsers to parse results (`Parses`) and a iterative parsing function `parses_derivs s p` for calculating a list of parse results of `p` run on the string `s`. 
 
+For more details please see our paper in LangSec '22: [Certified Parsing of Dependent Regular Grammars](https://www.cs.cornell.edu/~jsarracino/files/depgrammars.pdf)
+
 # Example: Netstring parser
 We implement a parser for netstrings in [src/theories/Libs/Netstrings.v](src/theories/Libs/NetStrings.v), called `net_str`. You can see the parsing behavior with `vm_compute`, for example:
 
