@@ -131,8 +131,12 @@ Section Single.
       auto.
   Qed.
 
-  Definition net_str := 
+  Definition net_str' := 
     num >>= net_str_suff.
+
+  Definition net_str := 
+    num >>= fun n => 
+    char ":" $> ((repeat n pAny) <$ char ",").
 
   Lemma repeat_any: 
     forall {s s' n}, 
