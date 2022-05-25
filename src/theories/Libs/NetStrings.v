@@ -17,6 +17,8 @@ Ltac red_parses_all :=
   unfold "$>" in *;
   unfold "<$" in *;
   repeat (match goal with 
+  | H: Parses _ (bind _ _) _ |- _ =>
+    erewrite bind_spec in H
   | H: Parses _ (_ >>= _) _ |- _ =>
     let H' := fresh "H" in
     erewrite bind_spec in H;
@@ -100,10 +102,12 @@ Section Single.
       s = v.
   Proof.
     intros n.
-    induction n; intros; simpl repeat in *; red_parses_all; intuition eauto.
-    erewrite app_nil_r; erewrite <- app_comm_cons; simpl;
-    eauto.
-    eapply list_eq_char.
+    induction n; intros; simpl repeat in *. try now (red_parses_all; intuition eauto).
+  
+    red_parses_all.
+    erewrite app_nil_r; erewrite <- app_comm_cons; simpl.
+    erewrite app_nil_r.
+    f_equal.
     intuition eauto.
   Qed.
 
@@ -140,17 +144,15 @@ Section Single.
       s = s' /\
       n = length s.
   Proof.
-  intros ?.
-    induction s.
-    - simpl.
-      intros.
+  induction s; simpl; intros.
+    - 
       split; intros.
       + destruct n; simpl in *; red_parses_all; [intuition eauto|].
         exfalso.
         inversion H.
       + destruct H; subst.
         econstructor.
-    - intros.
+    - 
       split; intros.
       + 
         destruct n.
@@ -163,18 +165,29 @@ Section Single.
           simpl in *;
           subst.
           clear H.
-          specialize (IHs x5 n).
+          specialize (IHs x0 n).
           destruct IHs.
-          erewrite app_nil_r in *.
-          specialize (H H2).
+          repeat erewrite app_nil_r in *.
+          specialize (H H3).
           intuition (subst; eauto).
       + destruct H; subst.
         simpl repeat.
-        eapply parse_map; [|shelve].
-        eapply parse_cat; try econstructor.
-        eapply IHs; intuition eauto.
-        Unshelve.
-        exact eq_refl.
+        assert (a :: s = ((a :: s) ++ nil)) by shelve.
+        erewrite H.
+        clear H.
+        econstructor.
+        * 
+          assert (a :: s = (((a :: nil) ++ s))) by shelve.
+          erewrite H.
+          clear H.
+          econstructor; [econstructor|].
+          eapply parse_map; [eapply IHs; intuition eauto | exact eq_refl].
+        * simpl.
+          erewrite app_nil_r.
+          econstructor.
+    
+    Unshelve.
+    all: try erewrite app_nil_r; exact eq_refl.
   Qed.
 
   Theorem net_str_spec:
@@ -214,11 +227,15 @@ Section Single.
       assert (":" :: v ++ "," :: nil = (":" :: nil) ++ v ++ "," :: nil) by exact eq_refl.
       
       erewrite H; clear H.
-      eapply parse_cat; try eapply parse_char; intuition eauto || intuition eauto.
+      econstructor; try eapply parse_char; intuition eauto.
 
       assert (v ++ "," :: nil = (v ++ "," :: nil) ++ nil) by (erewrite app_nil_r; exact eq_refl).
       erewrite H.
       clear H.
+      eapply parse_map; [|shelve].
+      unfold "<$".
+      erewrite bind_spec.
+      
       econstructor; [|shelve].
       eapply parse_cat; intuition eauto; try eapply parse_char; intuition eauto.
       
@@ -226,10 +243,12 @@ Section Single.
       evar (v': list ascii).
       specialize (H v v' (length v)).
       subst v'.
-      eapply H.
+      destruct H.
+      eapply H1.
       intuition eauto.
       Unshelve.
-      3: econstructor.
+      5: econstructor.
+      3: exact eq_refl.
       econstructor.
   Qed.
 
@@ -470,17 +489,13 @@ Module Nested.
     try now (econstructor; intuition eauto);
     intuition eauto.
     - inversion H.
-    - eapply parse_map; try econstructor; intuition eauto.
-    - destruct H1; [eapply AltL | eapply AltR]; intuition eauto.
-    - eapply parse_map; try econstructor; intuition eauto.
     - admit.
-      (* erewrite bind_spec. econstructor; intuition eauto.
-      eapply parse_map; intuition eauto.
-      erewrite app_length; intuition eauto. *)
-    - destruct H1; simpl_env; subst.
-      + eapply parse_map; try econstructor; intuition eauto.
-      + eapply parse_map; admit.
-        (* uh oh... can't prove this... *)
+      (* eapply parse_map; try econstructor; intuition eauto. *)
+    - destruct H1; [eapply AltL | eapply AltR]; intuition eauto.
+    - admit.
+      (* econstructor.
+      2: eapply parse_map. ; try econstructor; intuition eauto. *)
+    - admit.
   Admitted.
 
   Definition net_with_len : parser (sized_fmt * nat) := 

@@ -310,7 +310,9 @@ Section Parsers.
   Equations bind {A B} (p : parser A) (f: A -> parser B) : parser B :=
     bind pFail _ := pFail;
     bind (pPure v) f := f v;
+    (* bind (pBind p' g) f := bind p' (fun r => _); *)
     bind p f := pBind p f.
+ (* Next Obligation. *)
 
   Lemma bind_spec : 
     forall {A B s} {p: parser A} {f: A -> parser B} {v}, 
@@ -407,7 +409,6 @@ Section Parsers.
     pose proof inv_filter H.
     clear H.
     red_parses_all.
-    Check eqb_spec.
     pose proof eqb_spec c v.
     destruct H; subst; intuition eauto;
     inversion H0.
@@ -427,7 +428,7 @@ Section Parsers.
   Qed.
 
   Definition map {A B: Set} (p: parser A) (f: A -> B) : parser B :=
-    pBind p (fun x => pPure (f x)).
+    bind p (fun x => pPure (f x)).
 
   Lemma inv_map : 
     forall {A B : Set} {s p} {f: A -> B} {v: B}, 
@@ -436,6 +437,7 @@ Section Parsers.
   Proof.
     intros.
     unfold map in H.
+    erewrite bind_spec in H.
     red_parses_all; subst.
     eexists; intuition eauto.
     erewrite app_nil_r.
@@ -452,11 +454,14 @@ Section Parsers.
     assert (s = s ++ nil) by (erewrite app_nil_r; exact eq_refl).
     subst.
     erewrite H1.
+    unfold map.
+    erewrite bind_spec.
+
     econstructor; intuition eauto; econstructor.
   Qed.
 
   Definition cat {A B: Set} (p: parser A) (p': parser B) : parser (A * B) := 
-    pBind p (fun l => map p' (fun r => (l, r))).
+    bind p (fun l => map p' (fun r => (l, r))).
 
   Lemma inv_cat : 
     forall {A B : Set} {s p p'} {v: A * B}, 
@@ -469,6 +474,7 @@ Section Parsers.
   Proof.
     intros.
     unfold cat in H.
+    erewrite bind_spec in H.
     red_parses_all; subst.
     pose proof inv_map H0; red_parses_all.
     repeat eexists; intuition eauto.
@@ -483,6 +489,8 @@ Section Parsers.
       Parses s'' (@cat A B p p') v''. 
   Proof.
     intros; subst.
+    unfold cat.
+    erewrite bind_spec.
     econstructor; intuition eauto.
     eapply parse_map; intuition eauto.
   Qed.
@@ -657,6 +665,7 @@ Section Parsers.
     deriv c pAny := pPure c;
     deriv c (pAlt l r) := alt (deriv c l) (deriv c r);
     deriv _ (pPure _) := pFail;
+    (* pStar p = (p <$> pStar p)  *)
     deriv c (pStar p) := map (cat (deriv c p) (star p)) (fun '(x, xs) => x :: xs);
     deriv c (@pBind A B p f) :=  
       alt (bind (deriv c p) f)
